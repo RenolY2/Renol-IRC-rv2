@@ -13,6 +13,8 @@ class Networking(object):
         server_conn = socket.create_connection((host, port), timeOut,
                                             source_address=(bindIP, bindPort))
 
+        #self.
+
 
 
 class _socketThread(threading.Thread):
@@ -23,14 +25,18 @@ class _socketThread(threading.Thread):
         self._stop = False
         self.exception = None
 
+        # We will set the network threads as daemons so that we don't
+        # have to put additional effort into stopping the threads manually.
+        self.daemon = True
+
 
     def run(self):
         pass
 
 
-class RecvSocket(_socketThread):
+class ReadSocket(_socketThread):
     def __init__(self, *args, **kwargs):
-        super(RecvSocket, self).__init__(*args, **kwargs)
+        super(ReadSocket, self).__init__(*args, **kwargs)
 
     def run(self):
         line_buffer = ""
@@ -71,18 +77,38 @@ class RecvSocket(_socketThread):
                         pass #do nothing
 
 
-    # Every IRC message is made of, at most, three components:
+    # Every IRC message is made of three main components:
     # The prefix, the command and the arguments. We need to split
     # the incoming messages into these components.
     def _split_msg(self, msg):
+        # An IRC message can contain an optional argument prefixed with ':'.
+        # It is unique because it can contain spaces, unlike the normal arguments.
+        msg_rest, sep, string_arg = msg.partition(" :")
 
-        if msg.startswith(":"):
-            prefix, cmd, args = msg.split(" ", 2)
+        if not sep:
+            string_arg = None
+
+
+        msg_rest_list = msg_rest.split()
+
+        # An IRC message can start with a prefix,
+        # the first character of which must be ':'
+        if msg_rest_list[0].startswith(":"):
+            prefix = msg_rest_list.pop(0)
+            prefix = prefix.lstrip(":")
         else:
             prefix = None
-            cmd, args = msg.split(" ", 1)
 
+        # An IRC message must contain a command that comes after
+        # the prefix
+        command = msg_rest_list.pop(0)
 
+        # An IRC message can contain arguments that follow after the command.
+        args_list = msg_rest_list
+
+        return prefix, command, args_list, string_arg
+
+    
 
 
 
@@ -94,7 +120,9 @@ class SendSocket(_socketThread):
 
     def run(self):
         while not self._stop:
-            pass
+            msg = self._buffer.get()
+
+
 
 
 
@@ -102,14 +130,9 @@ class SendSocket(_socketThread):
 
 
 if __name__ == "__main__":
-    string = ""
-    string2 = "abc"
+    raw = ":prefix command   arg1   arg2   :asdasjd aw daw   wadhwawajh "
+    #raw = "command   arg1   arg2   :asdasjd aw daw   wadhwawajh "
+    #raw = "comand arg1"
+    #raw = "command"
 
-    if string:
-        print("herp")
-    if not string:
-        print("durp")
-    if string2:
-        print("herp")
-    if not string2:
-        print("durp")
+    print(ReadSocket._split_msg(None, raw))
