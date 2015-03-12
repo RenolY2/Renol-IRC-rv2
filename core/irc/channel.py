@@ -1,0 +1,4 @@
+
+
+class Channel(object):
+    pass
