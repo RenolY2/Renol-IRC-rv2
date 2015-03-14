@@ -18,6 +18,7 @@ class Networking(object):
 
 
 class _socketThread(threading.Thread):
+    encoding = "utf-8"
     def __init__(self, socket):
         self._socket = socket
         self._buffer = queue.Queue()
@@ -35,6 +36,7 @@ class _socketThread(threading.Thread):
 
 
 class ReadSocket(_socketThread):
+    encoding = "utf-8"
     def __init__(self, *args, **kwargs):
         super(ReadSocket, self).__init__(*args, **kwargs)
 
