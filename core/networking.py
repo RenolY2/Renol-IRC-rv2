@@ -13,11 +13,15 @@ class Networking(object):
         server_conn = socket.create_connection((host, port), timeOut,
                                             source_address=(bindIP, bindPort))
 
-        #self.
+        self.ReadThread = ReadSocket(server_conn)
+        self.WritetThread = SendSocket(server_conn)
 
-
+    def set_encoding(self):
+        self.ReadThread
 
 class _socketThread(threading.Thread):
+    encoding = "utf-8"
+
     def __init__(self, socket):
         self._socket = socket
         self._buffer = queue.Queue()
@@ -29,6 +33,8 @@ class _socketThread(threading.Thread):
         # have to put additional effort into stopping the threads manually.
         self.daemon = True
 
+    def set_encoding(self, encoding):
+        self.encoding = encoding
 
     def run(self):
         pass
@@ -53,7 +59,7 @@ class ReadSocket(_socketThread):
                 # into different messages.
                 # This can be done by adding the data to the line buffer, and then
                 # trying to split the line buffer at \n characters.
-                line_buffer += data
+                line_buffer += data.decode(self.encoding)
                 lines = line_buffer.split("\n")
 
                 # The last line in the list does not end with a \n, so we will remove it
@@ -80,7 +86,8 @@ class ReadSocket(_socketThread):
     # Every IRC message is made of three main components:
     # The prefix, the command and the arguments. We need to split
     # the incoming messages into these components.
-    def _split_msg(self, msg):
+    @staticmethod
+    def _split_msg(msg):
         # An IRC message can contain an optional argument prefixed with ':'.
         # It is unique because it can contain spaces, unlike the normal arguments.
         msg_rest, sep, string_arg = msg.partition(" :")
@@ -120,7 +127,39 @@ class SendSocket(_socketThread):
 
     def run(self):
         while not self._stop:
-            msg = self._buffer.get()
+            prefix, command, args, message = self._buffer.get()
+            msg = self._pack_msg(prefix, command, args, message)
+
+
+            self._socket.send(msg.encode("utf-8"))
+
+    @staticmethod
+    def _pack_msg(prefix, command, arguments, message):
+        msg_assembly = []
+
+        if prefix is not None:
+            msg_assembly.append(":"+prefix)
+        msg_assembly.append(command)
+
+        msg_assembly.extend(arguments)
+
+        if message is not None:
+            msg_assembly.append(":"+message)
+
+        msg = " ".join(msg_assembly)
+        return msg
+
+
+    def send(self, command, arguments = [], message = None, prefix = None):
+        for arg in arguments:
+            # Arguments cannot contain space characters. To prevent the irc server
+            # from interpreting our message incorrectly, we will raise an exception
+            # right here.
+            if " " in arg:
+                raise RuntimeError( "Illegal space inside Argument: '{0}'"
+                                    "from arguments '{1}'".format(arg, arguments))
+
+        self._buffer.put((prefix, command, arguments, message))
 
 
 
@@ -130,9 +169,28 @@ class SendSocket(_socketThread):
 
 
 if __name__ == "__main__":
-    raw = ":prefix command   arg1   arg2   :asdasjd aw daw   wadhwawajh "
-    #raw = "command   arg1   arg2   :asdasjd aw daw   wadhwawajh "
-    #raw = "comand arg1"
-    #raw = "command"
+    test_messages = [
+        (None, "command", [], None),
+        (None, "command", ["arg1"], None),
+        ("prefix", "command", [], None),
+        ("prefix", "command", ["arg1"], None),
 
-    print(ReadSocket._split_msg(None, raw))
+        (None, "command", [], "test message"),
+        (None, "command", ["arg1"], "test message"),
+        ("prefix", "command", [], "test message"),
+        ("prefix", "command", ["arg1"], "test message"),
+    ]
+
+    for msg in test_messages:
+        msg = ("someprefix", "somecommand", ["arg1", "arg2"], None)
+        packed = SendSocket._pack_msg(*msg)
+        unpacked = ReadSocket._split_msg(packed)
+        re_packed = SendSocket._pack_msg(*unpacked)
+
+        assert msg == unpacked
+        assert packed == re_packed
+        print("Test successful for message:", msg)
+
+    print("All tests were successful!")
+
+
