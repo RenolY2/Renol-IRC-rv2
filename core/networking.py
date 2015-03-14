@@ -1,28 +1,43 @@
 
 
+
 import socket
 import threading
 import queue
 import traceback
 
+from time import sleep
+
 class Networking(object):
     def __init__(self, host, port,
-                 bindIP = "", bindPort = 0,
-                 timeOut = 180):
+                 bind_ip = "", bind_port = 0,
+                 timeout = 180):
 
-        server_conn = socket.create_connection((host, port), timeOut,
-                                            source_address=(bindIP, bindPort))
+        server_conn = socket.create_connection((host, port), timeout,
+                                            source_address=(bind_ip, bind_port))
 
         self.ReadThread = ReadSocket(server_conn)
-        self.WritetThread = SendSocket(server_conn)
+        self.SendThread = SendSocket(server_conn)
 
-    def set_encoding(self):
-        self.ReadThread
+    def start_threads(self):
+        self.ReadThread.start()
+        self.SendThread.start()
+
+    def set_encoding(self, encoding):
+        self.ReadThread.encoding = encoding
+        self.SendThread.encoding = encoding
+
+    def send_msg(self, *args, **kwargs):
+        self.SendThread.send_msg(*args, **kwargs)
+    def read_msg(self, *args, **kwargs):
+        return self.ReadThread.read_msg(*args, **kwargs)
 
 class _socketThread(threading.Thread):
     encoding = "utf-8"
 
     def __init__(self, socket):
+        super(_socketThread, self).__init__()
+
         self._socket = socket
         self._buffer = queue.Queue()
 
@@ -49,10 +64,13 @@ class ReadSocket(_socketThread):
 
         while not self._stop:
             try:
-                data = self._socket.read(1024)
+                data = self._socket.recv(1024)
             except Exception as error:
+
                 # We will store the traceback so that it can be looked at from the main program.
                 self.exception = traceback.format_exc()
+                print(self.exception)
+                self._stop = True
                 #self.exception_appeared = True
             else:
                 # The data we received needs to be broken up at every \n character
@@ -78,10 +96,17 @@ class ReadSocket(_socketThread):
                     line = line.rstrip()
 
                     if line:
-                        prefix, command, arguments = self._split_msg(line)
+                        prefix, command, arguments, message = self._split_msg(line)
+                        self._buffer.put((prefix, command, arguments, message))
                     else:
                         pass #do nothing
 
+    def read_msg(self):
+        try:
+            value = self._buffer.get_nowait()
+        except queue.Empty:
+            value = None
+        return value
 
     # Every IRC message is made of three main components:
     # The prefix, the command and the arguments. We need to split
@@ -119,8 +144,6 @@ class ReadSocket(_socketThread):
 
 
 
-
-
 class SendSocket(_socketThread):
     def __init__(self, *args, **kwargs):
         super(SendSocket, self).__init__(*args, **kwargs)
@@ -128,10 +151,11 @@ class SendSocket(_socketThread):
     def run(self):
         while not self._stop:
             prefix, command, args, message = self._buffer.get()
-            msg = self._pack_msg(prefix, command, args, message)
+            msg = self._pack_msg(prefix, command, args, message) + "\r\n"
 
-
+            print("Sent away:",msg)
             self._socket.send(msg.encode("utf-8"))
+            sleep(2)
 
     @staticmethod
     def _pack_msg(prefix, command, arguments, message):
@@ -150,7 +174,7 @@ class SendSocket(_socketThread):
         return msg
 
 
-    def send(self, command, arguments = [], message = None, prefix = None):
+    def send_msg(self, command, arguments = [], message = None, prefix = None):
         for arg in arguments:
             # Arguments cannot contain space characters. To prevent the irc server
             # from interpreting our message incorrectly, we will raise an exception
