@@ -31,6 +31,7 @@ class Networking(object):
         self.SendThread.send_msg(*args, **kwargs)
     def read_msg(self, *args, **kwargs):
         return self.ReadThread.read_msg(*args, **kwargs)
+    
 
 class _socketThread(threading.Thread):
     encoding = "utf-8"
@@ -150,11 +151,11 @@ class SendSocket(_socketThread):
 
     def run(self):
         while not self._stop:
-            prefix, command, args, message = self._buffer.get()
-            msg = self._pack_msg(prefix, command, args, message) + "\r\n"
-
+            #prefix, command, args, message = self._buffer.get()
+            #msg = self._pack_msg(prefix, command, args, message) + "\r\n"
+            msg = self._buffer.get()
             print("Sent away:",msg)
-            self._socket.send(msg.encode("utf-8"))
+            self._socket.send(msg)
             sleep(2)
 
     @staticmethod
@@ -175,6 +176,10 @@ class SendSocket(_socketThread):
 
 
     def send_msg(self, command, arguments = [], message = None, prefix = None):
+        if len(arguments) > 15:
+            raise RuntimeError("Too many arguments: {0} "
+                               "(Only up to 15 allowed)".format(len(arguments)))
+
         for arg in arguments:
             # Arguments cannot contain space characters. To prevent the irc server
             # from interpreting our message incorrectly, we will raise an exception
@@ -182,8 +187,14 @@ class SendSocket(_socketThread):
             if " " in arg:
                 raise RuntimeError( "Illegal space inside Argument: '{0}'"
                                     "from arguments '{1}'".format(arg, arguments))
+        msg = self._pack_msg(prefix, command, arguments, message) + "\r\n"
+        encoded_msg = msg.encode(self.encoding)
 
-        self._buffer.put((prefix, command, arguments, message))
+        if len(encoded_msg) > 512:
+            raise RuntimeError("Message exceeds character limit ({0} "
+                               "vs 512)".format(len(encoded_msg)))
+
+        self._buffer.put(encoded_msg)
 
 
 
