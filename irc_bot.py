@@ -2,15 +2,10 @@ import time
 
 from core.networking import Networking
 
-
-
-
 host = "irc.esper.net"
 port = 6667
 
-
-IRCNetworking = Networking(host, port, timeout=90)
-
+IRCNetworking = Networking(host, port, timeout=300)
 IRCNetworking.start_threads()
 
 passw = "abcd_blemo"
@@ -24,9 +19,10 @@ IRCNetworking.send_msg("USER", [ident, "*", "*"], realname)
 
 print("Read loop starting now!")
 
-start = time.time()
+last_ping = time.time()
+running = True
 
-while True:
+while running:
     msg = IRCNetworking.read_msg()
     if msg is None:
         time.sleep(0.1)
@@ -37,4 +33,10 @@ while True:
             IRCNetworking.send_msg("PONG", message=text)
         if cmd == "004":
             IRCNetworking.send_msg("JOIN", ["#test"])
-
+    """
+    if (time.time() - last_ping) > 30:
+        IRCNetworking.send_msg("PING", [host])
+        last_ping = time.time()
+    """
+    if IRCNetworking.thread_has_crashed:
+        running = False
