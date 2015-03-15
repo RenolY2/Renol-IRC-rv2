@@ -5,19 +5,34 @@ import socket
 import threading
 import queue
 import traceback
+import sys
 
 from time import sleep
 
 class Networking(object):
     def __init__(self, host, port,
                  bind_ip = "", bind_port = 0,
-                 timeout = 180):
+                 timeout = 180, tcp_keepalive = True):
 
-        server_conn = socket.create_connection((host, port), timeout,
+        self.server_conn = socket.create_connection((host, port), timeout,
                                             source_address=(bind_ip, bind_port))
 
-        self.ReadThread = ReadSocket(server_conn)
-        self.SendThread = SendSocket(server_conn)
+        # The TCP keepalive should prevent random timeouts
+        # after a long interval of no data being received or sent.
+        # Thanks to Pyker for this code! http://gist.github.com/Pyker/57cdbfe1d5dc233af263
+        ## TCP keepalive
+        if tcp_keepalive:
+            self.server_conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            if sys.platform == 'win32':
+                self.server_conn.ioctl(socket.SIO_KEEPALIVE_VALS, (1, 30000, 5000))
+            elif sys.platform.startswith('linux'):
+                # TODO: untested
+                self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 30)
+                self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
+                self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
+
+        self.ReadThread = ReadSocket(self.server_conn)
+        self.SendThread = SendSocket(self.server_conn)
 
     def start_threads(self):
         self.ReadThread.start()
@@ -31,7 +46,11 @@ class Networking(object):
         self.SendThread.send_msg(*args, **kwargs)
     def read_msg(self, *args, **kwargs):
         return self.ReadThread.read_msg(*args, **kwargs)
-    
+
+    @property
+    def thread_has_crashed(self):
+        return (self.ReadThread.exception is not None
+                or self.SendThread.exception is not None)
 
 class _socketThread(threading.Thread):
     encoding = "utf-8"
