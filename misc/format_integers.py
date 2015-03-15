@@ -17,7 +17,7 @@ def format_bytes(byte_count):
     return "{0:.2f}{1}".format(bytes, lazy_list[cnt])
 
 
-def format_integer(count):
+def format_integers(count):
     if count < 1000:
         return count
     cnt = 0
