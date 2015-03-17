@@ -2,6 +2,7 @@
 # The names of the numeric replies are taken
 # from the RFC 1459.
 
+
 class Reply(object):
     # Error replies
     ERR_NO_SUCH_NICK = 401
@@ -9,7 +10,7 @@ class Reply(object):
     ERR_NO_SUCH_CHANNEL = 403
     ERR_CANNOT_SEND_TO_CHAN = 404
     ERR_TOO_MANY_CHANNELS = 405
-    ERR_WAS_NO_SUCH_NICK = 406 # Returned by WHOWAS
+    ERR_WAS_NO_SUCH_NICK = 406  # Returned by WHOWAS
     ERR_TOO_MANY_TARGETS = 407
     ERR_NO_ORIGIN = 409
     ERR_NO_RECIPIENT = 411
@@ -60,16 +61,15 @@ class Reply(object):
 
     # Command responses
     RPL_NONE = 300
-    RPL_AWAY = 301 # Refers to other users being away
     RPL_USERHOST = 302
-    RPL_IS_ON = 303 # Used by ISON
-    RPL_UNAWAY = 305
-    RPL_NOW_AWAY = 306
+    RPL_IS_ON = 303     # Used by message ISON
+    RPL_USER_AWAY = 301      # Refers to other users being away
+    RPL_YOU_ARE_BACK = 305
+    RPL_YOU_ARE_AWAY = 306
 
     RPL_WHOIS_USER = 311
     RPL_WHOIS_SERVER = 312
     RPL_WHOIS_OPERATOR = 313
-
     RPL_WHOIS_IDLE = 317
     RPL_END_OF_WHOIS = 318
     RPL_WHOIS_CHANNELS = 319
@@ -89,6 +89,7 @@ class Reply(object):
     RPL_SUMMONING = 342
 
     RPL_VERSION = 351
+
     RPL_WHO_REPLY = 352
     RPL_END_OF_WHO = 315
 
@@ -146,14 +147,13 @@ class Reply(object):
     RPL_L_USER_CLIENT = 251
     RPL_L_USER_OP = 252
     RPL_L_USER_UNKNOWN = 253
+    RPL_L_USER_CHANNELS = 254
     RPL_L_USER_ME = 255
+
     RPL_ADMIN_ME = 256
     RPL_ADMIN_LOC1 = 257
     RPL_ADMIN_LOC2 = 258
     RPL_ADMIN_EMAIL = 259
-    
-
-
 
 
 _reply_names = {}
@@ -165,6 +165,7 @@ for key in Reply.__dict__:
 
 def get_reply_name(num):
     return _reply_names[num]
+
 
 if __name__ == "__main__":
     print(Reply.ERR_NOOPERHOST)
