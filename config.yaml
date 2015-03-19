@@ -1,0 +1,10 @@
+User Info:
+    password: abc
+    name: MyNickname
+    ident: RenolIRCBot
+    realname: RenolIRCBot
+Connection Info:
+    host: ''
+    port: 6667
+    bind address: ['', 0]
+    timeout: 300
