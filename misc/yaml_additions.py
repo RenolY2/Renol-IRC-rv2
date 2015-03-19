@@ -7,7 +7,8 @@ from yaml.constructor import ConstructorError
 # The Ordered_Dumper and Ordered_Loader classes
 # use the OrderedDict for representing and constructing
 # the mapping type.
-# This allows the key order to be 
+# This allows the key order to be retained even after saving
+# the data structure again.
 
 class Ordered_Dumper(Dumper):
     def __init__(self, *args, **kwargs):
