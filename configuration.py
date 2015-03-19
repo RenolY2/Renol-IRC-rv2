@@ -7,7 +7,7 @@ from misc.yaml_additions import Ordered_Loader, Ordered_Dumper
 # Through the Config class, it should be possible to define
 # a basic schema for validating a config file that should be
 # loaded. The schema should also double as a default configuration.
-class Config(object):
+class ConfigSchema(object):
     def __init__(self, schema = {}):
         self._schema = schema
 
@@ -68,13 +68,13 @@ class Config(object):
 
 if __name__ == "__main__":
     from misc.config_templates import default_bot_config
-    schema = Config(default_bot_config)
+    schema = ConfigSchema(default_bot_config)
     print(default_bot_config)
 
-    with open("config_temp.yaml", "w") as f:
+    with open("config.yaml", "w") as f:
         schema.save_default(f)
         #schema.load_file(f)
-    schema = Config({})
+    schema = ConfigSchema({})
     with open("config_temp.yaml", "r") as f:
         result = schema.load_file(f)
 
