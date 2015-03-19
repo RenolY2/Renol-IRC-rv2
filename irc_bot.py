@@ -1,21 +1,23 @@
 import time
+from collections import OrderedDict
 
 from core.networking import Networking
+from configuration import Config
+from misc.config_templates import default_bot_config
 
-host = "irc.esper.net"
-port = 6667
+ConfigSchema = Config(default_bot_config)
+with open("config.yaml", "r") as f:
+    config = ConfigSchema.load_file(f)
 
-IRCNetworking = Networking(host, port, timeout=300)
+userinfo = config["User Info"]
+conninfo = config["Connection Info"]
+
+IRCNetworking = Networking(conninfo["host"], conninfo["port"], timeout=300)
 IRCNetworking.start_threads()
 
-passw = "abcd_blemo"
-name = "Renolv2"
-ident = "RenolBot"
-realname = "RenolBot"
-
-IRCNetworking.send_msg("PASS", [passw])
-IRCNetworking.send_msg("NICK", [name])
-IRCNetworking.send_msg("USER", [ident, "*", "*"], realname)
+IRCNetworking.send_msg("PASS", [userinfo["password"]])
+IRCNetworking.send_msg("NICK", [userinfo["name"]])
+IRCNetworking.send_msg("USER", [userinfo["ident"], "*", "*"], userinfo["realname"])
 
 print("Read loop starting now!")
 
