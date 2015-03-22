@@ -1,6 +1,8 @@
 import yaml
 import os
 
+
+from copy import deepcopy
 from collections import MutableMapping, OrderedDict
 
 from misc.yaml_additions import Ordered_Loader, Ordered_Dumper
@@ -11,6 +13,8 @@ from misc.yaml_additions import Ordered_Loader, Ordered_Dumper
 
 
 class Config(object):
+    _schema = {}
+
     def __init__(self, filepath, schema={}):
         self._schema = schema
         self._filepath = filepath
@@ -76,12 +80,18 @@ class Config(object):
 
         return True
 
-    def save_default(self, fp=None):
+    #
+    def save_default(self, default=_schema, fp=None):
         with open(self._filepath, "w") as f:
-            yaml.dump(self._schema, f,
+            yaml.dump(default, f,
                       Dumper=Ordered_Dumper,
                       default_flow_style=False,
                       indent=4)
+
+    #
+    def set_default_config(self, default=_schema):
+        self.config_data = deepcopy(default)
+
 
     # To provide an easier way to access information from inside the
     # config data, we implement a few methods so that the Config object
@@ -102,13 +112,13 @@ class Config(object):
 if __name__ == "__main__":
     from misc.config_templates import default_bot_config
 
-    MyConfig = Config("config_temp.yaml", schema=default_bot_config)
+    my_config = Config("config_temp.yaml", schema=default_bot_config)
 
-    if not MyConfig.file_exists():
-        MyConfig.save_default()
+    if not my_config.file_exists():
+        my_config.save_default()
         print("Created new file")
 
-    MyConfig.load_file()
+    my_config.load_file()
 
-    print(MyConfig)
-    print(MyConfig["User Info"])
+    print(my_config)
+    print(my_config["User Info"])
