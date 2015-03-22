@@ -31,26 +31,26 @@ class Networking(object):
                 self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 5)
                 self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
 
-        self.ReadThread = ReadSocket(self.server_conn)
-        self.SendThread = SendSocket(self.server_conn)
+        self.read_thread = ReadSocket(self.server_conn)
+        self.send_thread = SendSocket(self.server_conn)
 
     def start_threads(self):
-        self.ReadThread.start()
-        self.SendThread.start()
+        self.read_thread.start()
+        self.send_thread.start()
 
     def set_encoding(self, encoding):
-        self.ReadThread.encoding = encoding
-        self.SendThread.encoding = encoding
+        self.read_thread.encoding = encoding
+        self.send_thread.encoding = encoding
 
     def send_msg(self, *args, **kwargs):
-        self.SendThread.send_msg(*args, **kwargs)
+        self.send_thread.send_msg(*args, **kwargs)
     def read_msg(self, *args, **kwargs):
-        return self.ReadThread.read_msg(*args, **kwargs)
+        return self.read_thread.read_msg(*args, **kwargs)
 
     @property
     def thread_has_crashed(self):
-        return (self.ReadThread.exception is not None
-                or self.SendThread.exception is not None)
+        return (self.read_thread.exception is not None
+                or self.send_thread.exception is not None)
 
 class _socketThread(threading.Thread):
     encoding = "utf-8"
@@ -173,7 +173,7 @@ class SendSocket(_socketThread):
             #prefix, command, args, message = self._buffer.get()
             #msg = self._pack_msg(prefix, command, args, message) + "\r\n"
             msg = self._buffer.get()
-            print("Sent away:",msg)
+            print("Sent away:", msg)
             self._socket.send(msg)
             sleep(2)
 
@@ -194,7 +194,7 @@ class SendSocket(_socketThread):
         return msg
 
 
-    def send_msg(self, command, arguments = [], message = None, prefix = None):
+    def send_msg(self, command, arguments=[], message=None, prefix=None):
         if len(arguments) > 15:
             raise RuntimeError("Too many arguments: {0} "
                                "(Only up to 15 allowed)".format(len(arguments)))
