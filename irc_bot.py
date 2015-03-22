@@ -5,40 +5,47 @@ from core.networking import Networking
 from configuration import Config
 from misc.config_templates import default_bot_config
 
-ConfigSchema = Config(default_bot_config)
-with open("config.yaml", "r") as f:
-    config = ConfigSchema.load_file(f)
 
-userinfo = config["User Info"]
-conninfo = config["Connection Info"]
+class IRCBot(object):
+    def __init__(self):
+        self.bot_config = Config("config.yaml", schema=default_bot_config)
+        self.bot_config.load_file()
 
-IRCNetworking = Networking(conninfo["host"], conninfo["port"], timeout=300)
-IRCNetworking.start_threads()
+    def start(self):
+        userinfo = self.bot_config["User Info"]
+        conninfo = self.bot_config["Connection Info"]
 
-IRCNetworking.send_msg("PASS", [userinfo["password"]])
-IRCNetworking.send_msg("NICK", [userinfo["name"]])
-IRCNetworking.send_msg("USER", [userinfo["ident"], "*", "*"], userinfo["realname"])
+        irc_networking = Networking(conninfo["host"], conninfo["port"], timeout=conninfo["timeout"])
+        irc_networking.start_threads()
 
-print("Read loop starting now!")
+        irc_networking.send_msg("PASS", [userinfo["password"]])
+        irc_networking.send_msg("NICK", [userinfo["name"]])
+        irc_networking.send_msg("USER", [userinfo["ident"], "*", "*"], userinfo["realname"])
 
-last_ping = time.time()
-running = True
+        print("Read loop starting now!")
 
-while running:
-    msg = IRCNetworking.read_msg()
-    if msg is None:
-        time.sleep(0.1)
-    else:
-        pref, cmd, args, text = msg
-        print(msg)
-        if cmd == "PING":
-            IRCNetworking.send_msg("PONG", message=text)
-        if cmd == "004":
-            IRCNetworking.send_msg("JOIN", ["#test"])
-    """
-    if (time.time() - last_ping) > 30:
-        IRCNetworking.send_msg("PING", [host])
         last_ping = time.time()
-    """
-    if IRCNetworking.thread_has_crashed:
-        running = False
+        running = True
+
+        while running:
+            msg = irc_networking.read_msg()
+            if msg is None:
+                time.sleep(0.1)
+            else:
+                pref, cmd, args, text = msg
+                print(msg)
+                if cmd == "PING":
+                    irc_networking.send_msg("PONG", message=text)
+                if cmd == "004":
+                    irc_networking.send_msg("JOIN", ["#test"])
+            """
+            if (time.time() - last_ping) > 30:
+                IRCNetworking.send_msg("PING", [host])
+                last_ping = time.time()
+            """
+            if irc_networking.thread_has_crashed:
+                running = False
+
+if __name__ == "__main__":
+    bot = IRCBot()
+    bot.start()
