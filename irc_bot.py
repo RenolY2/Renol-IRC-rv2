@@ -5,6 +5,7 @@ from core.networking import Networking
 from core.message_types.message_handler import MessageHandler
 from configuration import Config
 
+from core.message_types.server_information import ServerInformation
 
 from misc.config_templates import default_bot_config
 
@@ -17,6 +18,10 @@ class IRCBot(object):
         conninfo = self.bot_config["Connection Info"]
         self.irc_networking = Networking(conninfo["host"], conninfo["port"], timeout=conninfo["timeout"])
         self._message_handler = MessageHandler()
+
+        self.server_info = ServerInformation()
+        self.server_info.set_message_handlers(self._message_handler.set_handler)
+
 
     def start(self):
         userinfo = self.bot_config["User Info"]
@@ -45,6 +50,10 @@ class IRCBot(object):
                     self.irc_networking.send_msg("PONG", message=text)
                 if cmd == "004":
                     self.irc_networking.send_msg("JOIN", ["#test"])
+
+                if self._message_handler.has_handler(cmd):
+                    self._message_handler.execute_handler(cmd,
+                                                          self, cmd, pref, args, text)
             """
             if (time.time() - last_ping) > 30:
                 IRCNetworking.send_msg("PING", [host])
