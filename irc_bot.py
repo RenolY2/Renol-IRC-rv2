@@ -6,9 +6,10 @@ from core.message_types.message_handler import MessageHandler
 from configuration import Config
 
 from core.message_types.server_information import ServerInformation
+from core.message_types.user_messages import UserMessages
 
 from misc.config_templates import default_bot_config
-
+from tools import Tools
 
 class IRCBot(object):
     def __init__(self):
@@ -19,9 +20,13 @@ class IRCBot(object):
         self.irc_networking = Networking(conninfo["host"], conninfo["port"], timeout=conninfo["timeout"])
         self._message_handler = MessageHandler()
 
+        self.user_messages = UserMessages()
+        self.user_messages.set_message_handlers(self._message_handler.set_handler)
+
         self.server_info = ServerInformation()
         self.server_info.set_message_handlers(self._message_handler.set_handler)
 
+        self.tools = Tools()
 
     def start(self):
         userinfo = self.bot_config["User Info"]
