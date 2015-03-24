@@ -5,7 +5,7 @@
 
 class Reply(object):
     # Misc replies
-    ISUPPORT = "005"
+    RPL_ISUPPORT = "005"
 
 
     # Error replies
