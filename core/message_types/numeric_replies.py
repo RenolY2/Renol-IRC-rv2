@@ -4,6 +4,10 @@
 
 
 class Reply(object):
+    # Misc replies
+    ISUPPORT = "005"
+
+
     # Error replies
     ERR_NO_SUCH_NICK = "401"
     ERR_NO_SUCH_SERVER = "402"
