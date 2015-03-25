@@ -25,5 +25,11 @@ class UserMessages(IRCModule):
         elif text.startswith("shutdown"):
             raise RuntimeError("Shutting down")
 
+        elif text.startswith("flood_test"):
+            #raise RuntimeError("Shutting down")
+            for i in range(15):
+                bot.irc_networking.send_msg("PRIVMSG", [channel], "Test {0}".format(i))
+
+
     def set_message_handlers(self, set_handler):
         set_handler("PRIVMSG", self.privmsg_handler)
