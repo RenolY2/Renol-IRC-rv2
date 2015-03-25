@@ -7,7 +7,7 @@ import queue
 import traceback
 import sys
 
-from time import sleep
+from time import sleep, time
 
 class Networking(object):
     def __init__(self, host, port,
@@ -46,6 +46,18 @@ class Networking(object):
         self.send_thread.send_msg(*args, **kwargs)
     def read_msg(self, *args, **kwargs):
         return self.read_thread.read_msg(*args, **kwargs)
+
+    def _set_wait_coefficient(self,
+                              base_delay=2, messages_per_minute=30,
+                              burst=0):
+        k = messages_per_minute
+        c = base_delay
+        q = burst
+
+        a = -(2/k)*(60/k - c)/(q-(2/3)*k)
+        b = (2/k)*(60/k - c)-(2/3)*a*k
+
+        self.send_thread._set_wait_coefficient(a, b, c)
 
     @property
     def thread_has_crashed(self):
@@ -165,17 +177,44 @@ class ReadSocket(_socketThread):
 
 
 class SendSocket(_socketThread):
+    # These coefficients are used in calculating
+    # the wait time between sending each message.
+    _coefficient_a, _coefficient_b, _base_c = None, None, None
+
     def __init__(self, *args, **kwargs):
         super(SendSocket, self).__init__(*args, **kwargs)
 
+
+
     def run(self):
+        messages_sent = 0
+        last_time = time()
+
+        last_send = 0
+        accumulated_wait_time = 0
+
         while not self._stop:
             #prefix, command, args, message = self._buffer.get()
             #msg = self._pack_msg(prefix, command, args, message) + "\r\n"
             msg = self._buffer.get()
             print("Sent away:", msg)
             self._socket.send(msg)
-            sleep(2)
+            messages_sent += 1
+            now = time()
+            diff = now - last_time
+
+            wait_time = self._calc_time(messages_sent)
+
+            if diff > wait_time:
+                messages_sent -= (diff // 2)*1
+                if messages_sent < 0:
+                    messages_sent = 0
+
+                wait_time = self._calc_time(messages_sent)
+            last_time = now
+            print("Wait time:", wait_time)
+
+            sleep(wait_time)
 
     @staticmethod
     def _pack_msg(prefix, command, arguments, message):
@@ -192,7 +231,6 @@ class SendSocket(_socketThread):
 
         msg = " ".join(msg_assembly)
         return msg
-
 
     def send_msg(self, command, arguments=[], message=None, prefix=None):
         if len(arguments) > 15:
@@ -215,14 +253,25 @@ class SendSocket(_socketThread):
 
         self._buffer.put(encoded_msg)
 
+    def _set_wait_coefficient(self, a, b, c):
+        self._coefficient_a, self._coefficient_b, self._base_c = a, b, c
 
+    def _calc_time(self, messages_sent):
+        n = messages_sent
+        result = self._coefficient_a*(n**2) + self._coefficient_b*n + self._base_c
 
+        # base_c specifies the minimum wait time.
+        # Also, there is no point in a wait time of more than 2 seconds
+        # because 2 seconds is the sweet spot for how long the bot
+        # should wait between sending messages.
+        if result < self._base_c:
+            result = self._base_c
+        if result > 2:
+            result = 2
 
+        return result
 
-
-
-
-if __name__ == "__main__":
+if False and __name__ == "__main__":
     test_messages = [
         (None, "command", [], None),
         (None, "command", ["arg1"], None),

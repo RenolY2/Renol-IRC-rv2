@@ -18,6 +18,8 @@ class IRCBot(object):
 
         conninfo = self.bot_config["Connection Info"]
         self.irc_networking = Networking(conninfo["host"], conninfo["port"], timeout=conninfo["timeout"])
+        self.irc_networking._set_wait_coefficient(base_delay=0.2, messages_per_minute=15, burst=2)
+
         self._message_handler = MessageHandler()
 
         self.user_messages = UserMessages()
