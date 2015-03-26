@@ -196,9 +196,17 @@ class SendSocket(_socketThread):
         while not self._stop:
             #prefix, command, args, message = self._buffer.get()
             #msg = self._pack_msg(prefix, command, args, message) + "\r\n"
+
             msg = self._buffer.get()
             print("Sent away:", msg)
             self._socket.send(msg)
+
+
+            # The wait time is calculated based on how many
+            # messages have been sent.
+            # To reduce the wait time after a longer while of
+            # no messages being sent, messages_sent will be
+            # reduced for every 2 seconds that have passed.
             messages_sent += 1
             now = time()
             diff = now - last_time
