@@ -56,7 +56,7 @@ class IRCBot(object):
                 if cmd == "PING":
                     self.irc_networking.send_msg("PONG", message=text)
                 if cmd == "004":
-                    self.irc_networking.send_msg("JOIN", ["#test"])
+                    self.irc_networking.send_msg("JOIN", self.bot_config["Connection Info"]["channels"])
 
                 if self._message_handler.has_handler(cmd):
                     self._message_handler.execute_handler(cmd,
