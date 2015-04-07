@@ -13,8 +13,6 @@ from misc.yaml_additions import Ordered_Loader, Ordered_Dumper
 
 
 class Config(object):
-    _schema = {}
-
     def __init__(self, filepath, schema={}):
         self._schema = schema
         self._filepath = filepath
@@ -81,7 +79,10 @@ class Config(object):
         return True
 
     #
-    def save_default(self, default=_schema, fp=None):
+    def save_default(self, default=None, fp=None):
+        if default is None:
+            default = self._schema
+
         with open(self._filepath, "w") as f:
             yaml.dump(default, f,
                       Dumper=Ordered_Dumper,
@@ -89,7 +90,10 @@ class Config(object):
                       indent=4)
 
     #
-    def set_default_config(self, default=_schema):
+    def set_default_config(self, default=None):
+        if default is None:
+            default = self._schema
+
         self.config_data = deepcopy(default)
 
 
@@ -114,11 +118,10 @@ if __name__ == "__main__":
 
     my_config = Config("config_temp.yaml", schema=default_bot_config)
 
-    if not my_config.file_exists():
-        my_config.save_default()
-        print("Created new file")
+    #if not my_config.file_exists():
+    my_config.save_default()
+    print("Created new file")
 
-    my_config.load_file()
+    #my_config.load_file()
 
     print(my_config)
-    print(my_config["User Info"])
