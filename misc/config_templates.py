@@ -30,12 +30,13 @@ _message_sending = OrderedDict([
 ])
 
 _bot_options = OrderedDict([
-
+    ("Message Sending", _message_sending)
 ])
 
 default_bot_config = OrderedDict([
     ("User Info", _user_info),
-    ("Connection Info", _connection_info)
+    ("Connection Info", _connection_info),
+    ("Bot Options", _bot_options)
 ])
 """default_bot_config = {
     "User Info": {
