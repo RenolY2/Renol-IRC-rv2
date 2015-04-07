@@ -44,10 +44,11 @@ class Networking(object):
 
     def send_msg(self, *args, **kwargs):
         self.send_thread.send_msg(*args, **kwargs)
+
     def read_msg(self, *args, **kwargs):
         return self.read_thread.read_msg(*args, **kwargs)
 
-    def _set_wait_coefficient(self,
+    def set_wait_coefficient(self,
                               base_delay=2, messages_per_minute=30,
                               burst=0):
         k = messages_per_minute
@@ -57,7 +58,7 @@ class Networking(object):
         a = -(2/k)*(60/k - c)/(q-(2/3)*k)
         b = (2/k)*(60/k - c)-(2/3)*a*k
 
-        self.send_thread._set_wait_coefficient(a, b, c)
+        self.send_thread.set_wait_coefficient(a, b, c)
 
     @property
     def thread_has_crashed(self):
@@ -261,7 +262,7 @@ class SendSocket(_socketThread):
 
         self._buffer.put(encoded_msg)
 
-    def _set_wait_coefficient(self, a, b, c):
+    def set_wait_coefficient(self, a, b, c):
         self._coefficient_a, self._coefficient_b, self._base_c = a, b, c
 
     def _calc_time(self, messages_sent):
