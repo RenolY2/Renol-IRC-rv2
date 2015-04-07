@@ -1,9 +1,12 @@
+import logging
+
 from .irc_module_template import IRCModule
 from .numeric_replies import Reply
 
+
 class UserMessages(IRCModule):
     def __init__(self):
-        pass
+        self.log = logging.getLogger("bot.")
 
     def privmsg_handler(self, bot,
                         cmd, pref, args, text):
@@ -21,6 +24,13 @@ class UserMessages(IRCModule):
         elif text.startswith("say "):
             start, rest = text.split("say ", 1)
             bot.irc_networking.send_msg("PRIVMSG", [channel], rest+" ")
+
+            if "debug" in text:
+                self.log.debug("Message was logged as debug from %s: %s",
+                               name, text)
+            else:
+                self.log.info("Message was logged as info from %s: %s",
+                               name, text)
 
         elif text.startswith("shutdown"):
             raise RuntimeError("Shutting down")
