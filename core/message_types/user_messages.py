@@ -11,16 +11,16 @@ class UserMessages(IRCModule):
     def privmsg_handler(self, bot,
                         cmd, pref, args, text):
         channel = args[0]
+        name, sep, rest = pref.partition("!")
+        ident, sep, host = rest.partition("@")
+
         if "lowercase" in text:
-            name, sep, rest = pref.partition("!")
-            ident, sep, host = rest.partition("@")
-
-
             bot.irc_networking.send_msg("PRIVMSG", [channel],
                                         "Uppercase: {0}, lowercase: {1}".format(
                                             bot.tools.name_upper(name),
                                             bot.tools.name_lower(name)
-                                        ))
+                                            )
+                                        )
         elif text.startswith("say "):
             start, rest = text.split("say ", 1)
             bot.irc_networking.send_msg("PRIVMSG", [channel], rest+" ")
@@ -30,16 +30,15 @@ class UserMessages(IRCModule):
                                name, text)
             else:
                 self.log.info("Message was logged as info from %s: %s",
-                               name, text)
+                              name, text)
 
         elif text.startswith("shutdown"):
-            raise RuntimeError("Shutting down")
+            bot.shutdown_bot()
 
         elif text.startswith("flood_test"):
             #raise RuntimeError("Shutting down")
-            for i in range(15):
+            for i in range(10):
                 bot.irc_networking.send_msg("PRIVMSG", [channel], "Test {0}".format(i))
-
 
     def set_message_handlers(self, set_handler):
         set_handler("PRIVMSG", self.privmsg_handler)
