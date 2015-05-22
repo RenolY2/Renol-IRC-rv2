@@ -45,6 +45,8 @@ class IRCBot(object):
 
         self.log.info("All modules configured and set up. Bot is ready to go.")
 
+        self._shutdown = False
+
     def start(self):
         userinfo = self.bot_config["User Info"]
         conninfo = self.bot_config["Connection Info"]
@@ -60,15 +62,14 @@ class IRCBot(object):
         self.log.info("Listening for incoming messages now.")
 
         last_ping = time.time()
-        running = True
 
-        while running:
+        while not self._shutdown:
             msg = self.irc_networking.read_msg()
             if msg is None:
                 time.sleep(0.1)
             else:
                 pref, cmd, args, text = msg
-                print(msg)
+                #print(msg)
                 if cmd == "PING":
                     self.irc_networking.send_msg("PONG", message=text)
 
@@ -86,7 +87,11 @@ class IRCBot(object):
                 last_ping = time.time()
             """
             if self.irc_networking.thread_has_crashed:
-                running = False
+                self.shutdown_bot()
+
+    def shutdown_bot(self):
+        self.irc_networking.send_msg("QUIT", ["Test"])#message="Shutting down")
+        self._shutdown = True
 
 if __name__ == "__main__":
     bot_config = Config("config.yaml", schema=default_bot_config)
@@ -94,3 +99,18 @@ if __name__ == "__main__":
 
     bot = IRCBot(bot_config)
     bot.start()
+
+    log = logging.getLogger("bot.shutdown")
+    log.info("Now shutting down.")
+
+    # Wait until all outgoing messages have been sent.
+    # This allows the quit message to be received by the server before the connection is cut.
+
+    log.info("Status of send queue: Empty:%s/Full:%s",
+             bot.irc_networking.send_thread._buffer.empty(),
+             bot.irc_networking.send_thread._buffer.full())
+    bot.irc_networking.wait()
+
+    logging.shutdown()
+
+    log.info("Shut down!")
