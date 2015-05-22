@@ -1,18 +1,37 @@
 
-
-
 import socket
 import threading
 import queue
 import traceback
 import sys
+import logging
 
 from time import sleep, time
+
+from core.logging import DailyRotationHandler
+
+FORMAT = '%(name)s [%(asctime)s] %(message)s'
+
+TIMEFORMAT = '%H:%M:%S'
 
 class Networking(object):
     def __init__(self, host, port,
                  bind_ip = "", bind_port = 0,
                  timeout = 180, tcp_keepalive = True):
+
+
+        logging_format = logging.Formatter(FORMAT, datefmt=TIMEFORMAT)
+
+        console = logging.StreamHandler()
+        console.setFormatter(logging_format)
+
+        file_handler = DailyRotationHandler(pathformat="logs/raw/%Y/%m-%B.raw",
+                                            encoding="utf-8")
+        file_handler.setFormatter(logging_format)
+
+        raw_log = logging.getLogger("raw")
+        raw_log.addHandler(console)
+        raw_log.addHandler(file_handler)
 
         self.server_conn = socket.create_connection((host, port), timeout,
                                             source_address=(bind_ip, bind_port))
@@ -65,6 +84,14 @@ class Networking(object):
         return (self.read_thread.exception is not None
                 or self.send_thread.exception is not None)
 
+    # Wait until all outgoing messages have been sent,
+    # and all incoming messages have been parsed.
+    # This allows the bot to shut down in a cleaner way.
+    def wait(self):
+        self.send_thread._buffer.join()
+        self.read_thread._buffer.join()
+
+
 class _socketThread(threading.Thread):
     encoding = "utf-8"
 
@@ -91,6 +118,10 @@ class _socketThread(threading.Thread):
 class ReadSocket(_socketThread):
     def __init__(self, *args, **kwargs):
         super(ReadSocket, self).__init__(*args, **kwargs)
+
+
+        self.input_raw = logging.getLogger("raw.input")
+
 
     def run(self):
         line_buffer = ""
@@ -129,6 +160,7 @@ class ReadSocket(_socketThread):
                     line = line.rstrip()
 
                     if line:
+                        self.input_raw.info("%s", line)
                         prefix, command, arguments, message = self._split_msg(line)
                         self._buffer.put((prefix, command, arguments, message))
                     else:
@@ -184,7 +216,7 @@ class SendSocket(_socketThread):
 
     def __init__(self, *args, **kwargs):
         super(SendSocket, self).__init__(*args, **kwargs)
-
+        self.output_raw = logging.getLogger("raw.output")
 
 
     def run(self):
@@ -199,9 +231,10 @@ class SendSocket(_socketThread):
             #msg = self._pack_msg(prefix, command, args, message) + "\r\n"
 
             msg = self._buffer.get()
-            print("Sent away:", msg)
+            self.output_raw.info("%s", msg)
             self._socket.send(msg)
 
+            self._buffer.task_done()
 
             # The wait time is calculated based on how many
             # messages have been sent.
