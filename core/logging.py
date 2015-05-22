@@ -17,7 +17,7 @@ def setup_logging(loglevel="INFO", console_loglevel=None,
                   log_path_format="%Y/%m/%Y-%m-%d.log"):
 
     nullhandler = logging.NullHandler()
-    logging.basicConfig(level=loglevel,
+    logging.basicConfig(level=logging.DEBUG,
                         handlers=[nullhandler])
 
     if console_loglevel is None:
