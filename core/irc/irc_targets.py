@@ -49,7 +49,6 @@ class User(IRCTarget):
     identity = None
     hostname = None
 
-
     authed = False
 
     def __init__(self, name):
@@ -73,8 +72,8 @@ class Channel(IRCTarget):
     def add_user(self, name, user_obj):
         name_lower = self._lowercase_func(name)
 
-        if name_lower in self._userlist:
-            raise UserAlreadyInChannelError()
+        if name_lower in self.userlist:
+            raise UserAlreadyInChannelError(name, name_lower, channel_name=self.name)
 
         self.userlist[name_lower] = user_obj
 
@@ -85,7 +84,7 @@ class Channel(IRCTarget):
         try:
             del self.userlist[name_lower]
         except KeyError:
-            raise UserNotInChannelError(name, name_lower, self.name)
+            raise UserNotInChannelError(name, name_lower, channel_name=self.name)
 
     # Retrieve the user from the channel's userlist. The user must exist.
     def get_user(self, name):
@@ -94,7 +93,7 @@ class Channel(IRCTarget):
         try:
             return self.userlist[name_lower]
         except KeyError:
-            raise UserNotInChannelError(name, name_lower, self.name)
+            raise UserNotInChannelError(name, name_lower, channel_name=self.name)
 
     def user_exists(self, name):
         name_lower = self._lowercase_func(name)
