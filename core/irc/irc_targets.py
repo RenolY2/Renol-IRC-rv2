@@ -19,15 +19,18 @@ class IRCTarget(object):
 
 
 class User(IRCTarget):
-    # The flag is a symbol that specifies the role
-    # of the user, such as having voice or being channel operator.
-    _flag = ""
+    # The irc server can set various flags on the user that
+    # highlight his abilities.
+    _flags = {}
 
     # The ident and hostname of an user is not known when a channel
     # is first joined. This information needs to be added
     # at a later time, e.g. by sending a WHO command and parsing the response.
     _identity = None
     _hostname = None
+
+
+    _authed = False
 
     def __init__(self, name):
         super().__init__(name)
@@ -56,8 +59,11 @@ class Channel(IRCTarget):
     _topic = ""
     _userlist = {}
 
-    def __init__(self, name):
+    def __init__(self, name, lowercase_func, uppercase_func):
         super().__init__(name)
+
+        self._lowercase_func = lowercase_func
+        self._uppercase_func = uppercase_func
 
     def _set_topic(self, topic):
         pass
@@ -69,3 +75,42 @@ class Channel(IRCTarget):
     @property
     def userlist(self):
         return self._userlist
+
+    # Add the user to the channel's userlist. The user must not exist yet.
+    def add_user(self, name, user_obj):
+        lower_name = self._lowercase_func(name)
+
+        if lower_name in self._userlist:
+            raise RuntimeError("User '{name}'(original case: {realcase}) "
+                               "already exists in channel '{chan}'".format(
+                name=lower_name, realcase=name, chan=self.name
+            ))
+
+        self._userlist[lower_name] = user_obj
+
+    # Remove the user from the channel's userlist. The user must exist.
+    def remove_user(self, name):
+        lower_name = self._lowercase_func(name)
+
+        if lower_name not in self._userlist:
+            raise RuntimeError("Tried to remove an user, but "
+                               "User '{name}'(original case: {realcase}) "
+                               "doesn't exist in channel '{chan}'".format(
+                name=lower_name, realcase=name, chan=self.name
+            ))
+
+        del self._userlist[lower_name]
+
+    # Retrieve the user from the channel's userlist. The user must exist.
+    def get_user(self, name):
+        lower_name = self._lowercase_func(name)
+
+        if lower_name not in self._userlist:
+            raise RuntimeError("Tried to remove an user, but "
+                               "User '{name}'(original case: {realcase}) "
+                               "doesn't exist in channel '{chan}'".format(
+                name=lower_name, realcase=name, chan=self.name
+            ))
+
+        return self._userlist[lower_name]
+
