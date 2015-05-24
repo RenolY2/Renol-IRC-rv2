@@ -1,13 +1,35 @@
 
+
+class UserNotInChannelError(Exception):
+    def __init__(self, name, name_lowercase, channel_name):
+        self.name_lowercase = name_lowercase
+        self.name = name
+        self.channel_name = channel_name
+
+    def __str__(self):
+        return ("User '{name}'(lower case: {name_lower}) "
+                "doesn't exist in channel '{chan}'".format(
+            name=self.name, name_lower=self.name_lowercase,
+            chan=self.channel_name
+            ))
+
+
+class UserAlreadyInChannelError(Exception):
+    def __init__(self, name, name_lowercase, channel_name):
+        self.name_lowercase = name_lowercase
+        self.name = name
+        self.channel_name = channel_name
+
+    def __str__(self):
+        return ("User '{name}'(lower case: {name_lower}) "
+                "already exists in channel '{chan}'".format(
+            name=self.name, name_lower=self.name_lowercase,
+            chan=self.channel_name
+        ))
+
+
 # An IRC target is an entity to which a private message can be sent.
 # The only IRC targets, as of now, are the IRC user and the IRC channel.
-#
-# Some variables are defined as properties. This is so the user won't
-# think he can overwrite the variables without side effects.
-
-
-
-# Class that covers some aspects used by both an IRC user and an IRC channel.
 class IRCTarget(object):
     def __init__(self, name):
         self._name = name
@@ -78,39 +100,32 @@ class Channel(IRCTarget):
 
     # Add the user to the channel's userlist. The user must not exist yet.
     def add_user(self, name, user_obj):
-        lower_name = self._lowercase_func(name)
+        name_lower = self._lowercase_func(name)
 
-        if lower_name in self._userlist:
-            raise RuntimeError("User '{name}'(original case: {realcase}) "
-                               "already exists in channel '{chan}'".format(
-                name=lower_name, realcase=name, chan=self.name
-            ))
+        if name_lower in self._userlist:
+            raise UserAlreadyInChannelError()
 
-        self._userlist[lower_name] = user_obj
+        self._userlist[name_lower] = user_obj
 
     # Remove the user from the channel's userlist. The user must exist.
     def remove_user(self, name):
-        lower_name = self._lowercase_func(name)
+        name_lower = self._lowercase_func(name)
 
-        if lower_name not in self._userlist:
-            raise RuntimeError("Tried to remove an user, but "
-                               "User '{name}'(original case: {realcase}) "
-                               "doesn't exist in channel '{chan}'".format(
-                name=lower_name, realcase=name, chan=self.name
-            ))
-
-        del self._userlist[lower_name]
+        try:
+            del self._userlist[name_lower]
+        except KeyError:
+            raise UserNotInChannelError(name, name_lower, self.name)
 
     # Retrieve the user from the channel's userlist. The user must exist.
     def get_user(self, name):
-        lower_name = self._lowercase_func(name)
+        name_lower = self._lowercase_func(name)
 
-        if lower_name not in self._userlist:
-            raise RuntimeError("Tried to remove an user, but "
-                               "User '{name}'(original case: {realcase}) "
-                               "doesn't exist in channel '{chan}'".format(
-                name=lower_name, realcase=name, chan=self.name
-            ))
+        try:
+            return self._userlist[name_lower]
+        except KeyError:
+            raise UserNotInChannelError(name, name_lower, self.name)
 
-        return self._userlist[lower_name]
+    def user_exists(self, name):
+        name_lower = self._lowercase_func(name)
 
+        return name_lower in self._userlist
