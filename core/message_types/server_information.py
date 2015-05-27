@@ -5,8 +5,8 @@ from .numeric_replies import Reply
 class ServerInformation(IRCModule):
     isupport = {}
 
-    def __init__(self):
-        pass
+    #def __init__(self):
+    #    pass
 
 
     def handle_isupport_reply(self, bot,
@@ -27,6 +27,9 @@ class ServerInformation(IRCModule):
 
                 if token_name == "CASEMAPPING":
                     bot.tools.set_casemap(value)
+                if token_name == "CHANNELLEN":
+                    self.isupport[token_name] = int(value)
+
 
     def set_message_handlers(self, set_handler):
         set_handler(Reply.RPL_ISUPPORT, self.handle_isupport_reply)
