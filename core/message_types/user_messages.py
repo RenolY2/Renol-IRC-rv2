@@ -5,7 +5,9 @@ from .numeric_replies import Reply
 
 
 class UserMessages(IRCModule):
-    def __init__(self):
+    def __init__(self, bot):
+        super().__init__(bot)
+
         self.log = logging.getLogger("bot.")
 
     def privmsg_handler(self, bot,
