@@ -14,11 +14,41 @@ FORMAT = '%(name)s [%(asctime)s] %(message)s'
 
 TIMEFORMAT = '%H:%M:%S'
 
+
+class ArgumentError(Exception):
+    def __init__(self, arguments):
+        self.arguments = arguments
+
+class SpaceInArgumentError(ArgumentError):
+    def __init__(self, arguments, arg):
+        super().__init__(arguments)
+        self.arg = arg
+
+    def __str__(self):
+        return "An argument contains a space: '{0}'".format(
+            self.arg
+        )
+
+
+class TooManyArgumentsError(ArgumentError):
+    def __str__(self):
+        return "Message has {0} arguments, but no more than 15 allowed.".format(
+            len(self.arguments)
+        )
+
+class MessageLimitExceededError(Exception):
+    def __init__(self, message):
+        self.message = message
+
+    def __str__(self):
+        return "Message exceeds length: {0} characters (Must not be more than 512)".format(
+            len(self.message)
+        )
+
 class Networking(object):
     def __init__(self, host, port,
-                 bind_ip = "", bind_port = 0,
-                 timeout = 180, tcp_keepalive = True):
-
+                 bind_ip="", bind_port=0,
+                 timeout=180, tcp_keepalive=True):
 
         logging_format = logging.Formatter(FORMAT, datefmt=TIMEFORMAT)
 
@@ -34,7 +64,7 @@ class Networking(object):
         raw_log.addHandler(file_handler)
 
         self.server_conn = socket.create_connection((host, port), timeout,
-                                            source_address=(bind_ip, bind_port))
+                                                    source_address=(bind_ip, bind_port))
 
         # The TCP keepalive should prevent random timeouts
         # after a long interval of no data being received or sent.
@@ -89,7 +119,7 @@ class Networking(object):
     # This allows the bot to shut down in a cleaner way.
     def wait(self):
         self.send_thread._buffer.join()
-        self.read_thread._buffer.join()
+        #self.read_thread._buffer.join()
 
 
 class _socketThread(threading.Thread):
@@ -274,26 +304,56 @@ class SendSocket(_socketThread):
         msg = " ".join(msg_assembly)
         return msg
 
-    def send_msg(self, command, arguments=[], message=None, prefix=None):
+    def send_msg(self, command, arguments=tuple(), message=None, prefix=None):
         if len(arguments) > 15:
-            raise RuntimeError("Too many arguments: {0} "
-                               "(Only up to 15 allowed)".format(len(arguments)))
+            raise TooManyArgumentsError(arguments)
 
         for arg in arguments:
             # Arguments cannot contain space characters. To prevent the irc server
             # from interpreting our message incorrectly, we will raise an exception
             # right here.
             if " " in arg:
-                raise RuntimeError( "Illegal space inside Argument: '{0}'"
-                                    "from arguments '{1}'".format(arg, arguments))
+                raise SpaceInArgumentError(arguments, arg)
+
         msg = self._pack_msg(prefix, command, arguments, message) + "\r\n"
         encoded_msg = msg.encode(self.encoding)
 
         if len(encoded_msg) > 512:
-            raise RuntimeError("Message exceeds character limit ({0} "
-                               "vs 512)".format(len(encoded_msg)))
+            raise MessageLimitExceededError(encoded_msg)
 
         self._buffer.put(encoded_msg)
+
+
+    # Using this function, a list of arguments will be partitioned into several
+    # lists so that each list contains no more than arg_limit arguments, and the length
+    # of all arguments in a single list do not exceed the message length limit.
+    # If a single argument exceeds the length limit, it will be put into its own list,
+    # which can
+    def partition_arguments(self, arguments, arg_limit=15, msg_limit=400):
+        partitions = []
+
+        current_partition = []
+        current_size = 0
+
+        for arg in arguments:
+            bytes_repr = arg.encode(self.encoding)
+
+            if (current_size + len(bytes_repr) + 1 > msg_limit
+                    or len(current_partition) + 1 > arg_limit):
+
+                partitions.append(current_partition)
+
+                current_partition = []
+                current_size = 0
+
+            current_partition.append(arg)
+            current_size += len(bytes_repr) + 1
+
+        if len(current_partition) > 0:
+            partitions.append(current_partition)
+
+        return partitions
+
 
     def set_wait_coefficient(self, a, b, c):
         self._coefficient_a, self._coefficient_b, self._base_c = a, b, c
@@ -314,6 +374,7 @@ class SendSocket(_socketThread):
         return result
 
 if False and __name__ == "__main__":
+    """
     test_messages = [
         (None, "command", [], None),
         (None, "command", ["arg1"], None),
@@ -335,6 +396,9 @@ if False and __name__ == "__main__":
         assert msg == unpacked
         assert packed == re_packed
         print("Test successful for message:", msg)
+    """
+
+
 
     print("All tests were successful!")
 
