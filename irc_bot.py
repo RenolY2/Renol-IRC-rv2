@@ -26,14 +26,14 @@ class IRCBot(object):
         self.log = logging.getLogger("bot")
 
         conninfo = self.bot_config["Connection Info"]
-        self.irc_networking = Networking(conninfo["host"],
-                                         conninfo["port"],
-                                         timeout=conninfo["timeout"])
+        self.networking = Networking(conninfo["host"],
+                                     conninfo["port"],
+                                     timeout=conninfo["timeout"])
 
         msginfo = self.bot_config["Bot Options"]["Message Sending"]
-        self.irc_networking.set_wait_coefficient(base_delay=msginfo["minimum delay"],
-                                                 messages_per_minute=msginfo["messages per minute"],
-                                                 burst=msginfo["burst"])
+        self.networking.set_wait_coefficient(base_delay=msginfo["minimum delay"],
+                                             messages_per_minute=msginfo["messages per minute"],
+                                             burst=msginfo["burst"])
 
         self.message_handler = MessageHandler()
 
@@ -51,11 +51,11 @@ class IRCBot(object):
         userinfo = self.bot_config["User Info"]
         conninfo = self.bot_config["Connection Info"]
 
-        self.irc_networking.start_threads()
+        self.networking.start_threads()
 
-        self.irc_networking.send_msg("PASS", [userinfo["password"]])
-        self.irc_networking.send_msg("NICK", [userinfo["name"]])
-        self.irc_networking.send_msg("USER", [userinfo["ident"], "*", "*"], userinfo["realname"])
+        self.networking.send_msg("PASS", [userinfo["password"]])
+        self.networking.send_msg("NICK", [userinfo["name"]])
+        self.networking.send_msg("USER", [userinfo["ident"], "*", "*"], userinfo["realname"])
 
         self.log.info("User info sent to server. Bot name: %s, identity: %s, real name: %s",
                       userinfo["name"], userinfo["ident"], userinfo["realname"])
@@ -64,14 +64,14 @@ class IRCBot(object):
         last_ping = time.time()
 
         while not self._shutdown:
-            msg = self.irc_networking.read_msg()
+            msg = self.networking.read_msg()
             if msg is None:
                 time.sleep(0.1)
             else:
                 pref, cmd, args, text = msg
                 #print(msg)
                 if cmd == "PING":
-                    self.irc_networking.send_msg("PONG", message=text)
+                    self.networking.send_msg("PONG", message=text)
 
                 if self.message_handler.has_handler(cmd):
                     self.message_handler.execute_handler(cmd,
@@ -88,11 +88,11 @@ class IRCBot(object):
                 IRCNetworking.send_msg("PING", [host])
                 last_ping = time.time()
             """
-            if self.irc_networking.thread_has_crashed:
+            if self.networking.thread_has_crashed:
                 self.shutdown_bot()
 
     def shutdown_bot(self):
-        self.irc_networking.send_msg("QUIT", ["Test"])#message="Shutting down")
+        self.networking.send_msg("QUIT", ["Test"])#message="Shutting down")
         self._shutdown = True
 
 if __name__ == "__main__":
@@ -109,14 +109,14 @@ if __name__ == "__main__":
     # This allows the quit message to be received by the server before the connection is cut.
 
     log.info("Status of send queue: Empty:%s/Full:%s",
-             bot.irc_networking.send_thread._buffer.empty(),
-             bot.irc_networking.send_thread._buffer.full())
+             bot.networking.send_thread._buffer.empty(),
+             bot.networking.send_thread._buffer.full())
 
     log.info("Status of read queue: Empty:%s/Full:%s",
-             bot.irc_networking.read_thread._buffer.empty(),
-             bot.irc_networking.read_thread._buffer.full())
+             bot.networking.read_thread._buffer.empty(),
+             bot.networking.read_thread._buffer.full())
 
-    bot.irc_networking.wait()
+    bot.networking.wait()
 
     logging.shutdown()
 

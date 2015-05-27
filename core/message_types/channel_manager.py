@@ -77,7 +77,13 @@ class ChannelManager(IRCModule):
 
             self.channels[channel_name] = channel
 
-        partitions = self.bot.irc_networking.send_thread.partition_arguments(channels)
+        partitions = self.bot.networking.send_thread.partition_arguments(channels)
 
         for arguments in partitions:
-            self.bot.irc_networking.send_msg("JOIN", arguments=arguments)
+            self.bot.networking.send_msg("JOIN", arguments=arguments)
+
+    def part_channel(self, *channels):
+        pass
+
+    def list_channels(self):
+        pass
