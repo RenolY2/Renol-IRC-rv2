@@ -1,5 +1,6 @@
 from collections import MutableMapping
 
+
 # The NormalizedDict type executes a function on the key name
 # and uses the return value of that function to access
 # an item in the dictionary.
@@ -9,7 +10,6 @@ class NormalizedDict(MutableMapping):
 
         self.dict = dict()
         self.update(dict(*args, **kwargs))
-
 
     def __getitem__(self, key):
         return self.dict[self.norm_func(key)]
