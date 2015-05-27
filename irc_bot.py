@@ -8,6 +8,8 @@ from configuration import Config
 
 from core.message_types.server_information import ServerInformation
 from core.message_types.user_messages import UserMessages
+from core.message_types.channel_manager import ChannelManager
+
 from core.logging import setup_logging
 
 from misc.config_templates import default_bot_config
@@ -33,13 +35,11 @@ class IRCBot(object):
                                                  messages_per_minute=msginfo["messages per minute"],
                                                  burst=msginfo["burst"])
 
-        self._message_handler = MessageHandler()
+        self.message_handler = MessageHandler()
 
-        self.user_messages = UserMessages()
-        self.user_messages.set_message_handlers(self._message_handler.set_handler)
-
-        self.server_info = ServerInformation()
-        self.server_info.set_message_handlers(self._message_handler.set_handler)
+        self.user_messages = UserMessages(self)
+        self.server_info = ServerInformation(self)
+        self.channel_manager = ChannelManager(self)
 
         self.tools = Tools()
 
@@ -73,14 +73,16 @@ class IRCBot(object):
                 if cmd == "PING":
                     self.irc_networking.send_msg("PONG", message=text)
 
-                if cmd == "004":
-                    self.irc_networking.send_msg("JOIN", self.bot_config["Connection Info"]["channels"])
-                    self.log.info("Joining channels: %s",
-                                  ", ".join(self.bot_config["Connection Info"]["channels"]))
+                if self.message_handler.has_handler(cmd):
+                    self.message_handler.execute_handler(cmd,
+                                                         self, cmd, pref, args, text)
 
-                if self._message_handler.has_handler(cmd):
-                    self._message_handler.execute_handler(cmd,
-                                                          self, cmd, pref, args, text)
+                if cmd == "376":
+                    #self.irc_networking.send_msg("JOIN", self.bot_config["Connection Info"]["channels"])
+                    #self.log.info("Joining channels: %s",
+                    #              ", ".join(self.bot_config["Connection Info"]["channels"]))
+                    #self.channel_manager.join_channel(*[("#"+"a"*40+str(x)) for x in range(25)])
+                    self.channel_manager.join_channel(*self.bot_config["Connection Info"]["channels"])
             """
             if (time.time() - last_ping) > 30:
                 IRCNetworking.send_msg("PING", [host])
@@ -109,6 +111,11 @@ if __name__ == "__main__":
     log.info("Status of send queue: Empty:%s/Full:%s",
              bot.irc_networking.send_thread._buffer.empty(),
              bot.irc_networking.send_thread._buffer.full())
+
+    log.info("Status of read queue: Empty:%s/Full:%s",
+             bot.irc_networking.read_thread._buffer.empty(),
+             bot.irc_networking.read_thread._buffer.full())
+
     bot.irc_networking.wait()
 
     logging.shutdown()
