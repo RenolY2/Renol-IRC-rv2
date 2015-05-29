@@ -2,13 +2,9 @@
    and it returns you the appropiate form. (Also has some extra features, in case you have a collection of strings.)"""
 
 
-def multiple_of(value, string_of_single, string_of_multiple, return_with_value=False, before_string=None, after_string=None):
+def multiple_of(value, string_of_single, string_of_multiple, return_with_value=False,
+                before_string='', after_string=''):
     cache = ''
-    if not before_string:
-        before_string = ''
-    if not after_string:
-        after_string = ''
-
     cache += before_string
 
     if return_with_value:
