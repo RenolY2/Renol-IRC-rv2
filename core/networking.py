@@ -199,6 +199,7 @@ class ReadSocket(_socketThread):
     def read_msg(self):
         try:
             value = self._buffer.get_nowait()
+            self._buffer.task_done()
         except queue.Empty:
             value = None
         return value
