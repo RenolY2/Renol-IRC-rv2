@@ -9,14 +9,14 @@ Here is a rundown of how the delayer for sending messages works:
    is the amount of bytes sent in a second, and the value specifies the delay,
    i.e. how long the program needs to sleep in between two messages sent once
    the current average amount of bytes sent per second is bigger than the key value.
-   The keys will also be referred to as "delay groups"
+   The keys will also be referred to as "delay groups" or "delay categories"
  -
  - The dict needs to contain an entry for 0, which is the base delay when no messages
    have been sent yet. This also needs to be the smallest entry, so no negative entries allowed.
 
  - Example: We feed the dict {0: 1, 10: 2, 50: 3} into the delayer.
    As long as we send less than 10 bytes per second, our delay will always be 1. This also
-   means that we can less than 100 bytes every 10 seconds and still have a delay of 1.
+   means that we can send less than 100 bytes every 10 seconds and still have a delay of 1.
    If we send 10 bytes or more, but less than 50 bytes per second, then we will fall into
    the second category and have a delay of 2. If we send >= 50 bytes per second, we will have
    a delay of 3.
