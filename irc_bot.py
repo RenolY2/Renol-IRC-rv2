@@ -26,9 +26,13 @@ class IRCBot(object):
         self.log = logging.getLogger("bot")
 
         conninfo = self.bot_config["Connection Info"]
-        self.networking = Networking(conninfo["host"],
-                                     conninfo["port"],
-                                     timeout=conninfo["timeout"])
+        self.networking = Networking(conninfo["host"], conninfo["port"],
+                                     timeout=conninfo["timeout"],
+                                     floodcontrol_mode="msg_count",
+
+                                     floodcontrol_config={"burst_count_per_10_seconds": 5,
+                                                          "base_delay": 0.5,
+                                                          "max_delay": 2})
 
         msginfo = self.bot_config["Bot Options"]["Message Sending"]
         self.networking.set_wait_coefficient(base_delay=msginfo["minimum delay"],
