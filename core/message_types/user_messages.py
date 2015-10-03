@@ -17,7 +17,7 @@ class UserMessages(IRCModule):
         ident, sep, host = rest.partition("@")
 
         if "lowercase" in text:
-            bot.irc_networking.send_msg("PRIVMSG", [channel],
+            bot.networking.send_msg("PRIVMSG", [channel],
                                         "Uppercase: {0}, lowercase: {1}".format(
                                             bot.tools.name_upper(name),
                                             bot.tools.name_lower(name)
@@ -25,7 +25,7 @@ class UserMessages(IRCModule):
                                         )
         elif text.startswith("say "):
             start, rest = text.split("say ", 1)
-            bot.irc_networking.send_msg("PRIVMSG", [channel], rest+" ")
+            bot.networking.send_msg("PRIVMSG", [channel], rest+" ")
 
             if "debug" in text:
                 self.log.debug("Message was logged as debug from %s: %s",
@@ -40,7 +40,7 @@ class UserMessages(IRCModule):
         elif text.startswith("flood_test"):
             #raise RuntimeError("Shutting down")
             for i in range(10):
-                bot.irc_networking.send_msg("PRIVMSG", [channel], "Test {0}".format(i))
+                bot.networking.send_msg("PRIVMSG", [channel], "Test {0}".format(i))
 
     def set_message_handlers(self, set_handler):
         set_handler("PRIVMSG", self.privmsg_handler)
