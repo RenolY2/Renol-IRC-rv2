@@ -9,6 +9,7 @@ import logging
 from time import sleep, time
 
 from core.logging import DailyRotationHandler
+from misc.flood_protection import FloodControlManager
 
 FORMAT = '%(name)s [%(asctime)s] %(message)s'
 
@@ -18,6 +19,7 @@ TIMEFORMAT = '%H:%M:%S'
 class ArgumentError(Exception):
     def __init__(self, arguments):
         self.arguments = arguments
+
 
 class SpaceInArgumentError(ArgumentError):
     def __init__(self, arguments, arg):
@@ -36,6 +38,7 @@ class TooManyArgumentsError(ArgumentError):
             len(self.arguments)
         )
 
+
 class MessageLimitExceededError(Exception):
     def __init__(self, message):
         self.message = message
@@ -45,10 +48,12 @@ class MessageLimitExceededError(Exception):
             len(self.message)
         )
 
+
 class Networking(object):
     def __init__(self, host, port,
                  bind_ip="", bind_port=0,
-                 timeout=180, tcp_keepalive=True):
+                 timeout=180, tcp_keepalive=True,
+                 floodcontrol_mode="msg_count", floodcontrol_config={}):
 
         logging_format = logging.Formatter(FORMAT, datefmt=TIMEFORMAT)
 
@@ -81,7 +86,8 @@ class Networking(object):
                 self.server_conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT, 5)
 
         self.read_thread = ReadSocket(self.server_conn)
-        self.send_thread = SendSocket(self.server_conn)
+        self.send_thread = SendSocket(self.server_conn,
+                                      floodcontrol_mode, floodcontrol_config)
 
     def start_threads(self):
         self.read_thread.start()
@@ -122,13 +128,13 @@ class Networking(object):
         #self.read_thread._buffer.join()
 
 
-class _socketThread(threading.Thread):
+class SocketThread(threading.Thread):
     encoding = "utf-8"
 
-    def __init__(self, socket):
-        super(_socketThread, self).__init__()
+    def __init__(self, socket_):
+        super().__init__()
 
-        self._socket = socket
+        self._socket = socket_
         self._buffer = queue.Queue()
 
         self._stop = False
@@ -145,13 +151,11 @@ class _socketThread(threading.Thread):
         pass
 
 
-class ReadSocket(_socketThread):
-    def __init__(self, *args, **kwargs):
-        super(ReadSocket, self).__init__(*args, **kwargs)
-
+class ReadSocket(SocketThread):
+    def __init__(self, socket_):
+        super().__init__(socket_)
 
         self.input_raw = logging.getLogger("raw.input")
-
 
     def run(self):
         line_buffer = ""
@@ -237,18 +241,17 @@ class ReadSocket(_socketThread):
         return prefix, command, args_list, string_arg
 
 
-
-
-
-class SendSocket(_socketThread):
+class SendSocket(SocketThread):
     # These coefficients are used in calculating
     # the wait time between sending each message.
     _coefficient_a, _coefficient_b, _base_c = None, None, None
 
-    def __init__(self, *args, **kwargs):
-        super(SendSocket, self).__init__(*args, **kwargs)
+    def __init__(self, socket_,
+                 floodcontrol_mode, floodcontrol_config):
+        super().__init__(socket_)
         self.output_raw = logging.getLogger("raw.output")
 
+        self.flood_control = FloodControlManager(floodcontrol_mode, floodcontrol_config)
 
     def run(self):
         messages_sent = 0
@@ -266,7 +269,7 @@ class SendSocket(_socketThread):
             self._socket.send(msg)
 
             self._buffer.task_done()
-
+            """
             # The wait time is calculated based on how many
             # messages have been sent.
             # To reduce the wait time after a longer while of
@@ -284,7 +287,9 @@ class SendSocket(_socketThread):
                     messages_sent = 0
 
                 wait_time = self._calc_time(messages_sent)
-            last_time = now
+            last_time = now"""
+            wait_time = self.flood_control.calculate_delay(msg)
+
             print("Wait time:", wait_time)
 
             sleep(wait_time)
