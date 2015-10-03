@@ -41,9 +41,6 @@ class ChannelManager(IRCModule):
         # with the str.lower function to make all keys lowercase before operating on them.
         self.channels = NormalizedDict(normalize_func=str.lower)
 
-    def set_message_handlers(self, set_handler):
-        pass
-
     def _validate_name(self, channel_name):
 
         # Empty strings and strings with spaces are not valid
@@ -86,4 +83,17 @@ class ChannelManager(IRCModule):
         pass
 
     def list_channels(self):
-        pass
+        return self.channels.keys()
+
+
+    def handle_name_reply(self, bot,
+                          cmd, pref, args, text):
+        print("name reply")
+        print(args)
+
+
+
+
+
+    def set_message_handlers(self, set_handler):
+        set_handler(Reply.RPL_NAME_REPLY, self.handle_name_reply)
